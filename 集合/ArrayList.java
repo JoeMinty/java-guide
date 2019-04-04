@@ -194,7 +194,7 @@ public class ArrayList<E> extends AbstractList<E>
     private void ensureExplicitCapacity(int minCapacity) {
         modCount++;
 
-        // overflow-conscious code
+        // overflow-conscious code 扩容的核心方法
         if (minCapacity - elementData.length > 0)
             grow(minCapacity);
     }
@@ -378,6 +378,7 @@ public class ArrayList<E> extends AbstractList<E>
      */
     public boolean add(E e) {
         ensureCapacityInternal(size + 1);  // Increments modCount!!
+        // 在数组对应位置添加元素
         elementData[size++] = e;
         return true;
     }
