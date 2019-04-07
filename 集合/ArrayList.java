@@ -164,6 +164,7 @@ public class ArrayList<E> extends AbstractList<E>
 
     /**
      * 扩容机制，确保它至少能容纳元素的数量
+     * 最好在 add 大量元素之前用 ensureCapacity 方法，以减少增量重新分配的次数，此方法是提供给用户使用的
      */
     public void ensureCapacity(int minCapacity) {
         int minExpand = (elementData != DEFAULTCAPACITY_EMPTY_ELEMENTDATA)
@@ -226,6 +227,10 @@ public class ArrayList<E> extends AbstractList<E>
     private static int hugeCapacity(int minCapacity) {
         if (minCapacity < 0) // overflow
             throw new OutOfMemoryError();
+        // 对minCapacity和MAX_ARRAY_SIZE进行比较
+        // 若minCapacity大，将Integer.MAX_VALUE作为新数组的大小
+        // 若MAX_ARRAY_SIZE大，将MAX_ARRAY_SIZE作为新数组的大小
+        // MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
         return (minCapacity > MAX_ARRAY_SIZE) ?
             Integer.MAX_VALUE :
             MAX_ARRAY_SIZE;
@@ -306,6 +311,8 @@ public class ArrayList<E> extends AbstractList<E>
      * 因此，调用者可以自由地修改返回的数组。 此方法充当基于阵列和基于集合的API之间的桥梁。
      */
     public Object[] toArray() {
+        // elementData：要复制的数组；size：要复制的长度
+        // copyOf() 内部实际调用了 System.arraycopy() 方法
         return Arrays.copyOf(elementData, size);
     }
 
@@ -589,6 +596,7 @@ public class ArrayList<E> extends AbstractList<E>
      * @serialData The length of the array backing the <tt>ArrayList</tt>
      *             instance is emitted (int), followed by all of its elements
      *             (each an <tt>Object</tt>) in the proper order.
+     * 序列化和反序列化
      */
     private void writeObject(java.io.ObjectOutputStream s)
         throws java.io.IOException{
@@ -612,6 +620,7 @@ public class ArrayList<E> extends AbstractList<E>
     /**
      * Reconstitute the <tt>ArrayList</tt> instance from a stream (that is,
      * deserialize it).
+     * 序列化和反序列化
      */
     private void readObject(java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException {
