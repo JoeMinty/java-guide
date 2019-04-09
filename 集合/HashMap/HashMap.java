@@ -500,15 +500,20 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     final void putMapEntries(Map<? extends K, ? extends V> m, boolean evict) {
         int s = m.size();
         if (s > 0) {
+            // 判断table是否已经初始化
             if (table == null) { // pre-size
+                // 未初始化，s为m的实际元素个数
                 float ft = ((float)s / loadFactor) + 1.0F;
                 int t = ((ft < (float)MAXIMUM_CAPACITY) ?
                          (int)ft : MAXIMUM_CAPACITY);
+                // 计算得到的t大于阈值，则初始化阈值         
                 if (t > threshold)
                     threshold = tableSizeFor(t);
             }
             else if (s > threshold)
-                resize();
+                resize(); // 已初始化，并且m元素个数大于阈值，进行扩容处理
+            
+            // 将m中的所有元素添加至HashMap中
             for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
                 K key = e.getKey();
                 V value = e.getValue();
@@ -625,18 +630,21 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
         Node<K,V>[] tab; Node<K,V> p; int n, i;
+        // table未初始化或者长度为0，进行扩容
         if ((tab = table) == null || (n = tab.length) == 0)
             n = (tab = resize()).length;
+        // (n - 1) & hash 确定元素存放在哪个桶中，桶为空，新生成结点放入桶中(此时，这个结点是放在数组中)
         if ((p = tab[i = (n - 1) & hash]) == null)
-            tab[i] = newNode(hash, key, value, null);
-        else {
+            tab[i] = newNode(hash, key, value, null); 
+        else { // 桶中已经存在元素
             Node<K,V> e; K k;
-            if (p.hash == hash &&
-                ((k = p.key) == key || (key != null && key.equals(k))))
-                e = p;
-            else if (p instanceof TreeNode)
-                e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
-            else {
+            // 比较桶中第一个元素(数组中的结点)的hash值相等，key相等
+            if (p.hash == hash && ((k = p.key) == key || (key != null && key.equals(k))))
+                e = p; // 将第一个元素赋值给e，用e来记录
+            else if (p instanceof TreeNode) // hash值不相等，即key不相等；为红黑树结点
+                e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value); // 放入树中
+            else { // 为链表结点
+                // 在链表最末插入结点
                 for (int binCount = 0; ; ++binCount) {
                     if ((e = p.next) == null) {
                         p.next = newNode(hash, key, value, null);
