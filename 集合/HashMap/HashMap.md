@@ -6,6 +6,36 @@
 
   计算公式： **threshold = capacity \* loadFactor** ，**衡量数组是否需要扩增的标准**
 
+- **链表节点**
+```java
+  static class Node<K,V> implements Map.Entry<K,V> {
+        final int hash;  // hash值，就是落于桶的位置
+        final K key;     // 健
+        V value;         // 值
+        Node<K,V> next;  // 指向下一个节点的指针
+
+        Node(int hash, K key, V value, Node<K,V> next) {
+            this.hash = hash;
+            this.key = key;
+            this.value = value;
+            this.next = next;
+        }
+        ...
+   }
+```
+
+- **TreeNode**
+```java
+  static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
+          TreeNode<K,V> parent;  // red-black tree links
+          TreeNode<K,V> left;
+          TreeNode<K,V> right;
+          TreeNode<K,V> prev;    // needed to unlink next upon deletion
+          boolean red;
+          ...
+  }
+```
+
 - **putMapEntries**方法
 
 - **put**方法
@@ -147,3 +177,36 @@
   }
   ```
 
+- **treeifyBin方法**
+```java
+  /** 将桶内所有的 链表节点 替换成 红黑树节点 */
+  final void treeifyBin(Node<K,V>[] tab, int hash) {
+      int n, index; Node<K,V> e;
+      // 如果当前哈希表为空，或者哈希表中元素的个数小于进行树形化的阈值(默认为 64)，执行新建或者扩容
+      if (tab == null || (n = tab.length) < MIN_TREEIFY_CAPACITY)
+          resize();
+      else if ((e = tab[index = (n - 1) & hash]) != null) {
+          // 如果哈希表中的元素个数超过了树形化阈值，进行树形化
+          // e 是哈希表中指定位置桶里的链表节点，从第一个开始
+          TreeNode<K,V> hd = null, tl = null; // 红黑树的头、尾节点
+          do {
+              // 新建一个树形节点，内容和当前链表节点 e 一致
+              TreeNode<K,V> p = replacementTreeNode(e, null);
+              if (tl == null) // 确定树头节点
+                  hd = p;
+              else {
+                  p.prev = tl;
+                  tl.next = p;
+              }
+              tl = p;
+          } while ((e = e.next) != null);  
+          // 让桶的第一个元素指向新建的红黑树头结点，以后这个桶里的元素就是红黑树而不是链表了
+          if ((tab[index] = hd) != null)
+              hd.treeify(tab); // 最终构造红黑树
+      }
+  }
+```
+
+#### 参考
+
+https://blog.csdn.net/wushiwude/article/details/75331926
