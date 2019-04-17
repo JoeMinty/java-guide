@@ -1,10 +1,32 @@
+- **capacity容量**
+
+```java
+  DEFAULT_INITIAL_CAPACITY = 1 << 4 // 默认16
+  MAXIMUM_CAPACITY = 1 << 30; // 最大容量 =  2的30次方（若传入的容量过大，将被最大值替换）
+```
+
 - **loadFactor加载因子**
 
+```java
+  DEFAULT_LOAD_FACTOR = 0.75f
+```
   loadFactor加载因子是控制数组存放数据的疏密程度
 
-- **threshold**
+- **threshold扩容阈值**
 
   计算公式： **threshold = capacity \* loadFactor** ，**衡量数组是否需要扩增的标准**
+  
+- **桶的树化阈值**
+
+  TREEIFY_THRESHOLD = 8
+  
+- **桶的链表还原阈值**
+
+  UNTREEIFY_THRESHOLD = 6
+
+- **最小树形化容量阈值**
+  
+  当哈希表中的容量 > 该值时，才允许树形化链表
 
 - **链表节点**
 ```java
@@ -33,6 +55,18 @@
           TreeNode<K,V> prev;    // needed to unlink next upon deletion
           boolean red;
           ...
+  }
+```
+- **构造函数**
+```java
+  /** 默认构造函数 */
+  public HashMap() {
+    this.loadFactor = DEFAULT_LOAD_FACTOR; // all other fields defaulted
+  }
+  
+  /** 指定容量大小的构造函数 */
+  public HashMap(int initialCapacity) {
+    this(initialCapacity, DEFAULT_LOAD_FACTOR);
   }
 ```
 
