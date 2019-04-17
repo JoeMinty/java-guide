@@ -68,6 +68,27 @@
   public HashMap(int initialCapacity) {
     this(initialCapacity, DEFAULT_LOAD_FACTOR);
   }
+  
+  /** 指定容量大小和加载因子的构造函数 */
+  public HashMap(int initialCapacity, float loadFactor) {
+        if (initialCapacity < 0)
+            throw new IllegalArgumentException("Illegal initial capacity: " +
+                                               initialCapacity);
+        if (initialCapacity > MAXIMUM_CAPACITY)
+            initialCapacity = MAXIMUM_CAPACITY;
+        if (loadFactor <= 0 || Float.isNaN(loadFactor))
+            throw new IllegalArgumentException("Illegal load factor: " +
+                                               loadFactor);
+        this.loadFactor = loadFactor;
+        // 重新计算，设置扩容阈值
+        this.threshold = tableSizeFor(initialCapacity);
+    }
+    
+    /** 按传入的Map子类构造新的HashMap */
+    public HashMap(Map<? extends K, ? extends V> m) {
+        this.loadFactor = DEFAULT_LOAD_FACTOR;
+        putMapEntries(m, false);
+    }
 ```
 
 - **putMapEntries**方法
@@ -76,21 +97,28 @@
 
 ```java
     public V put(K key, V value) {
+        // 1.对key进行扰动函数计算hash值
+        // 2.调用私有的putVal()添加数据
         return putVal(hash(key), key, value, false, true);
     }
     
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                        boolean evict) {
             Node<K,V>[] tab; Node<K,V> p; int n, i;
+            
+            // 若哈希表的数组tab为空，则通过resize()创建
             if ((tab = table) == null || (n = tab.length) == 0)
-                n = (tab = resize()).length;
+                n = (tab = resize()).length; 
+            // 计算插入存储的数组索引i，插入时，需判断是否存在Hash冲突（是否为null）
             if ((p = tab[i = (n - 1) & hash]) == null)
                 tab[i] = newNode(hash, key, value, null);
             else {
                 Node<K,V> e; K k;
+                // 判断table[i]的元素的key是否与插入的key一样，若相同则直接用新value覆盖旧value
                 if (p.hash == hash &&
                     ((k = p.key) == key || (key != null && key.equals(k))))
                     e = p;
+                // 判断需插入的数据结构是红黑树 or 链表
                 else if (p instanceof TreeNode)
                     e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
                 else {
@@ -123,6 +151,17 @@
         }
 ```
  
+- **hash**
+```java
+  /** 根据key生成hash值 */
+  static final int hash(Object key) {
+    int h;
+    // 1.取hashCode值： h = key.hashCode() 
+    // 2.高位参与低位的运算：h ^ (h >>> 16)  
+    return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+  }
+```
+  **为了提高存储key-value的数组下标位置的随机性 & 分布均匀性，应该尽量避免出现hash值冲突。即：对于不同key，存储的数组下标位置要尽可能不一样**
  
 - **resize**方法
 
