@@ -168,9 +168,17 @@
   扩容比较耗时，因为在此过程中，会伴随着一次hash分配，并且会遍历hash表中的所有元素。
 
 ```java
+  /**
+   * 1.初始化哈希表
+   * 2.当前数组容量过小，扩容
+   */
   final Node<K,V>[] resize() {
+      // 扩容前的数组
       Node<K,V>[] oldTab = table;
+      
+      // 扩容前的数组容量
       int oldCap = (oldTab == null) ? 0 : oldTab.length;
+      // 扩容前数组的阈值
       int oldThr = threshold;
       int newCap, newThr = 0;
       if (oldCap > 0) {
@@ -182,7 +190,7 @@
           // 没超过最大值，就扩充为原来的2倍
           else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY && oldCap >= DEFAULT_INITIAL_CAPACITY)
               newThr = oldThr << 1; // double threshold
-      }
+      } // 下面两种判断都是在初始化哈希表的时候
       else if (oldThr > 0) // initial capacity was placed in threshold
           newCap = oldThr;
       else { 				// zero initial threshold signifies using defaults
