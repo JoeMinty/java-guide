@@ -2,7 +2,8 @@
 ```java
 public class TreeMap<K,V>
     extends AbstractMap<K,V>
-    implements NavigableMap<K,V>, Cloneable, java.io.Serializable
+    implements NavigableMap<K,V>, Cloneable, java.io.Serializable {
+}
     
 public interface NavigableMap<K,V> extends SortedMap<K,V> {
   /** 导航方法 */
@@ -119,8 +120,84 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     
     
 ```
+**查找**
+```java
+    /** 对外暴露的接口 */
+    public V get(Object key) {
+        Entry<K,V> p = getEntry(key);
+        return (p==null ? null : p.value);
+    }
+    
+    
+```
 
-**其他重要方法**
+**插入**
+```java
+    public V put(K key, V value) {
+        Entry<K,V> t = root;
+        // 1.如果根节点为 null，将新节点设为根节点
+        if (t == null) {
+            compare(key, key); // type (and possibly null) check
+
+            root = new Entry<>(key, value, null);
+            size = 1;
+            modCount++;
+            return null;
+        }
+        int cmp;
+        Entry<K,V> parent;
+        
+        // split comparator and comparable paths
+        // 2.为 key 在红黑树找到合适的位置
+        Comparator<? super K> cpr = comparator;
+        if (cpr != null) {
+            // 如果是自定义的比较器
+            do {
+                parent = t;
+                cmp = cpr.compare(key, t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                    return t.setValue(value);
+            } while (t != null);
+        }
+        else {
+            if (key == null)
+                throw new NullPointerException();
+            // 默认比较器
+            @SuppressWarnings("unchecked")
+                Comparable<? super K> k = (Comparable<? super K>) key;
+            do {
+                parent = t;
+                cmp = k.compareTo(t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                    return t.setValue(value);
+            } while (t != null);
+        }
+        
+        // 3.将新节点链入红黑树中
+        Entry<K,V> e = new Entry<>(key, value, parent);
+        if (cmp < 0)
+            parent.left = e;
+        else
+            parent.right = e;
+            
+        // 4.回调函数，插入新节点可能会破坏红黑树性质
+        fixAfterInsertion(e);
+        size++;
+        modCount++;
+        return null;
+    }
+```
+
+
+**遍历重要方法**
 
 **successor方法**
     此方法在进行循环遍历的时候会触发，红黑树是一个中序遍历的输出方式
