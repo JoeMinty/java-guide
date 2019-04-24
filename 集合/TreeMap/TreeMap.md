@@ -32,6 +32,234 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
 
 ```
 
+
+**查找**
+```java
+    /** 对外暴露的接口 */
+    public V get(Object key) {
+        Entry<K,V> p = getEntry(key);
+        return (p==null ? null : p.value);
+    }
+    
+    
+    final Entry<K,V> getEntry(Object key) {
+        // Offload comparator-based version for sake of performance
+        if (comparator != null)
+            return getEntryUsingComparator(key);
+        if (key == null)
+            throw new NullPointerException();
+        @SuppressWarnings("unchecked")
+            Comparable<? super K> k = (Comparable<? super K>) key;
+        Entry<K,V> p = root;
+        while (p != null) {
+            int cmp = k.compareTo(p.key);
+            if (cmp < 0)
+                p = p.left;
+            else if (cmp > 0)
+                p = p.right;
+            else
+                return p;
+        }
+        return null;
+    }
+```
+
+**插入**
+```java
+    public V put(K key, V value) {
+        Entry<K,V> t = root;
+        // 1.如果根节点为 null，将新节点设为根节点
+        if (t == null) {
+            compare(key, key); // type (and possibly null) check
+
+            root = new Entry<>(key, value, null);
+            size = 1;
+            modCount++;
+            return null;
+        }
+        int cmp;
+        Entry<K,V> parent;
+        
+        // split comparator and comparable paths
+        // 2.为 key 在红黑树找到合适的位置
+        Comparator<? super K> cpr = comparator;
+        if (cpr != null) {
+            // 如果是自定义的比较器
+            do {
+                parent = t;
+                cmp = cpr.compare(key, t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                    return t.setValue(value);
+            } while (t != null);
+        }
+        else {
+            if (key == null)
+                throw new NullPointerException();
+            // 默认比较器
+            @SuppressWarnings("unchecked")
+                Comparable<? super K> k = (Comparable<? super K>) key;
+            do {
+                parent = t;
+                cmp = k.compareTo(t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                    return t.setValue(value);
+            } while (t != null);
+        }
+        
+        // 3.将新节点链入红黑树中
+        Entry<K,V> e = new Entry<>(key, value, parent);
+        if (cmp < 0)
+            parent.left = e;
+        else
+            parent.right = e;
+            
+        // 4.回调函数，插入新节点可能会破坏红黑树性质
+        fixAfterInsertion(e);
+        size++;
+        modCount++;
+        return null;
+    }
+```
+
+**遍历重要方法**
+
+```
+TreeMap 可以保证键的有序性，默认是正序。所以在遍历过程中， TreeMap 会从小到大输出键的值。那么，接下来就来分析一下keySet方法，以及在遍历 keySet 方法产生的集合时，TreeMap 是如何保证键的有序性的
+```
+
+```java
+    /** 按升序返回key set */
+    public Set<K> keySet() {
+        return navigableKeySet();
+    }
+    
+    public NavigableSet<K> navigableKeySet() {
+        KeySet<K> nks = navigableKeySet;
+        return (nks != null) ? nks : (navigableKeySet = new KeySet<>(this));
+    }
+    
+    
+    /** 具体操作 */
+    
+     /**
+     * Base class for TreeMap Iterators
+     */
+    abstract class PrivateEntryIterator<T> implements Iterator<T> {
+        Entry<K,V> next;
+        Entry<K,V> lastReturned;
+        int expectedModCount;
+
+        PrivateEntryIterator(Entry<K,V> first) {
+            expectedModCount = modCount;
+            lastReturned = null;
+            next = first;
+        }
+
+        public final boolean hasNext() {
+            return next != null;
+        }
+
+        final Entry<K,V> nextEntry() {
+            Entry<K,V> e = next;
+            if (e == null)
+                throw new NoSuchElementException();
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+            next = successor(e);
+            lastReturned = e;
+            return e;
+        }
+
+        final Entry<K,V> prevEntry() {
+            Entry<K,V> e = next;
+            if (e == null)
+                throw new NoSuchElementException();
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+            next = predecessor(e);
+            lastReturned = e;
+            return e;
+        }
+
+        public void remove() {
+            if (lastReturned == null)
+                throw new IllegalStateException();
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+            // deleted entries are replaced by their successors
+            if (lastReturned.left != null && lastReturned.right != null)
+                next = lastReturned;
+            deleteEntry(lastReturned);
+            expectedModCount = modCount;
+            lastReturned = null;
+        }
+    }
+    
+    final class KeyIterator extends PrivateEntryIterator<K> {
+        KeyIterator(Entry<K,V> first) {
+            super(first);
+        }
+        public K next() {
+            return nextEntry().key;
+        }
+    }
+    
+    Iterator<K> keyIterator() {
+        return new KeyIterator(getFirstEntry());
+    }
+    
+    static final class KeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
+        private final NavigableMap<E, ?> m;
+        KeySet(NavigableMap<E,?> map) { m = map; }
+
+        public Iterator<E> iterator() {
+            if (m instanceof TreeMap)
+                return ((TreeMap<E,?>)m).keyIterator();
+            else
+                return ((TreeMap.NavigableSubMap<E,?>)m).keyIterator();
+        }
+        
+        // ... 省略
+    }
+    
+    
+```
+
+**successor方法**
+```java
+    /** 此方法在进行循环遍历的时候会触发，红黑树是一个中序遍历的输出方式 */
+    static <K,V> TreeMap.Entry<K,V> successor(Entry<K,V> t) {
+        if (t == null)
+            return null;
+        else if (t.right != null) {
+            // 有右子树的节点，后继节点就是右子树的“最左节点”
+            // 因为“最左子树”是右子树的最小节点
+            Entry<K,V> p = t.right;
+            while (p.left != null)
+                p = p.left;
+            return p;
+        } else {
+            // 如果右子树为空，则寻找当前节点所在左子树的第一个祖先节点
+            Entry<K,V> p = t.parent;
+            Entry<K,V> ch = t;
+            while (p != null && ch == p.right) {
+                ch = p;
+                p = p.parent;
+            }
+            return p;
+        }
+    }
+```
+
+
 **左旋**
 ```java
 /*
@@ -116,111 +344,6 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
         l.right = p;
         // 将p的父节点设为l
         p.parent = l;
-    }
+    } 
     
-    
-```
-**查找**
-```java
-    /** 对外暴露的接口 */
-    public V get(Object key) {
-        Entry<K,V> p = getEntry(key);
-        return (p==null ? null : p.value);
-    }
-    
-    
-```
-
-**插入**
-```java
-    public V put(K key, V value) {
-        Entry<K,V> t = root;
-        // 1.如果根节点为 null，将新节点设为根节点
-        if (t == null) {
-            compare(key, key); // type (and possibly null) check
-
-            root = new Entry<>(key, value, null);
-            size = 1;
-            modCount++;
-            return null;
-        }
-        int cmp;
-        Entry<K,V> parent;
-        
-        // split comparator and comparable paths
-        // 2.为 key 在红黑树找到合适的位置
-        Comparator<? super K> cpr = comparator;
-        if (cpr != null) {
-            // 如果是自定义的比较器
-            do {
-                parent = t;
-                cmp = cpr.compare(key, t.key);
-                if (cmp < 0)
-                    t = t.left;
-                else if (cmp > 0)
-                    t = t.right;
-                else
-                    return t.setValue(value);
-            } while (t != null);
-        }
-        else {
-            if (key == null)
-                throw new NullPointerException();
-            // 默认比较器
-            @SuppressWarnings("unchecked")
-                Comparable<? super K> k = (Comparable<? super K>) key;
-            do {
-                parent = t;
-                cmp = k.compareTo(t.key);
-                if (cmp < 0)
-                    t = t.left;
-                else if (cmp > 0)
-                    t = t.right;
-                else
-                    return t.setValue(value);
-            } while (t != null);
-        }
-        
-        // 3.将新节点链入红黑树中
-        Entry<K,V> e = new Entry<>(key, value, parent);
-        if (cmp < 0)
-            parent.left = e;
-        else
-            parent.right = e;
-            
-        // 4.回调函数，插入新节点可能会破坏红黑树性质
-        fixAfterInsertion(e);
-        size++;
-        modCount++;
-        return null;
-    }
-```
-
-
-**遍历重要方法**
-
-**successor方法**
-    此方法在进行循环遍历的时候会触发，红黑树是一个中序遍历的输出方式
-```java
-    static <K,V> TreeMap.Entry<K,V> successor(Entry<K,V> t) {
-        if (t == null)
-            return null;
-        else if (t.right != null) {
-            // 有右子树的节点，后继节点就是右子树的“最左节点”
-            // 因为“最左子树”是右子树的最小节点
-            Entry<K,V> p = t.right;
-            while (p.left != null)
-                p = p.left;
-            return p;
-        } else {
-            // 如果右子树为空，则寻找当前节点所在左子树的第一个祖先节点
-            Entry<K,V> p = t.parent;
-            Entry<K,V> ch = t;
-            while (p != null && ch == p.right) {
-                ch = p;
-                p = p.parent;
-            }
-            return p;
-        }
-    }
 ```
