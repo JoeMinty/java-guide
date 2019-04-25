@@ -32,7 +32,6 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
 
 ```
 
-
 **查找**
 ```java
     /** 对外暴露的接口 */
@@ -40,7 +39,6 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
         Entry<K,V> p = getEntry(key);
         return (p==null ? null : p.value);
     }
-    
     
     final Entry<K,V> getEntry(Object key) {
         // Offload comparator-based version for sake of performance
@@ -64,71 +62,6 @@ public interface NavigableMap<K,V> extends SortedMap<K,V> {
     }
 ```
 
-**插入**
-```java
-    public V put(K key, V value) {
-        Entry<K,V> t = root;
-        // 1.如果根节点为 null，将新节点设为根节点
-        if (t == null) {
-            compare(key, key); // type (and possibly null) check
-
-            root = new Entry<>(key, value, null);
-            size = 1;
-            modCount++;
-            return null;
-        }
-        int cmp;
-        Entry<K,V> parent;
-        
-        // split comparator and comparable paths
-        // 2.为 key 在红黑树找到合适的位置
-        Comparator<? super K> cpr = comparator;
-        if (cpr != null) {
-            // 如果是自定义的比较器
-            do {
-                parent = t;
-                cmp = cpr.compare(key, t.key);
-                if (cmp < 0)
-                    t = t.left;
-                else if (cmp > 0)
-                    t = t.right;
-                else
-                    return t.setValue(value);
-            } while (t != null);
-        }
-        else {
-            if (key == null)
-                throw new NullPointerException();
-            // 默认比较器
-            @SuppressWarnings("unchecked")
-                Comparable<? super K> k = (Comparable<? super K>) key;
-            do {
-                parent = t;
-                cmp = k.compareTo(t.key);
-                if (cmp < 0)
-                    t = t.left;
-                else if (cmp > 0)
-                    t = t.right;
-                else
-                    return t.setValue(value);
-            } while (t != null);
-        }
-        
-        // 3.将新节点链入红黑树中
-        Entry<K,V> e = new Entry<>(key, value, parent);
-        if (cmp < 0)
-            parent.left = e;
-        else
-            parent.right = e;
-            
-        // 4.回调函数，插入新节点可能会破坏红黑树性质
-        fixAfterInsertion(e);
-        size++;
-        modCount++;
-        return null;
-    }
-```
-
 **遍历重要方法**
 
 ```
@@ -136,17 +69,6 @@ TreeMap 可以保证键的有序性，默认是正序。所以在遍历过程中
 ```
 
 ```java
-    /** 按升序返回key set */
-    public Set<K> keySet() {
-        return navigableKeySet();
-    }
-    
-    public NavigableSet<K> navigableKeySet() {
-        KeySet<K> nks = navigableKeySet;
-        return (nks != null) ? nks : (navigableKeySet = new KeySet<>(this));
-    }
-    
-    
     /** 具体操作 */
     
      /**
@@ -173,6 +95,7 @@ TreeMap 可以保证键的有序性，默认是正序。所以在遍历过程中
                 throw new NoSuchElementException();
             if (modCount != expectedModCount)
                 throw new ConcurrentModificationException();
+            // 寻找节点e的后继节点
             next = successor(e);
             lastReturned = e;
             return e;
@@ -230,7 +153,15 @@ TreeMap 可以保证键的有序性，默认是正序。所以在遍历过程中
         // ... 省略
     }
     
+    /** 按升序返回key set */
+    public Set<K> keySet() {
+        return navigableKeySet();
+    }
     
+    public NavigableSet<K> navigableKeySet() {
+        KeySet<K> nks = navigableKeySet;
+        return (nks != null) ? nks : (navigableKeySet = new KeySet<>(this));
+    }
 ```
 
 **successor方法**
@@ -259,6 +190,170 @@ TreeMap 可以保证键的有序性，默认是正序。所以在遍历过程中
     }
 ```
 
+**predecessor方法**
+```java
+    /** 获取前一个节点 */
+    static <K,V> Entry<K,V> predecessor(Entry<K,V> t) {
+        if (t == null)
+            return null;
+        else if (t.left != null) {
+            Entry<K,V> p = t.left;
+            while (p.right != null)
+                p = p.right;
+            return p;
+        } else {
+            Entry<K,V> p = t.parent;
+            Entry<K,V> ch = t;
+            while (p != null && ch == p.left) {
+                ch = p;
+                p = p.parent;
+            }
+            return p;
+        }
+    }
+
+```
+
+
+**插入**
+```java
+    public V put(K key, V value) {
+        Entry<K,V> t = root;
+        // 1.如果根节点为 null，将新节点设为根节点
+        if (t == null) {
+            compare(key, key); // type (and possibly null) check
+
+            root = new Entry<>(key, value, null);
+            size = 1;
+            modCount++;
+            return null;
+        }
+        int cmp;
+        Entry<K,V> parent;
+        
+        // split comparator and comparable paths
+        // 2.为 key 在红黑树找到合适的位置
+        // 如果cpr不为null，采用定制排序
+        Comparator<? super K> cpr = comparator;
+        if (cpr != null) {
+            // 如果是自定义的比较器
+            do {
+                parent = t;
+                cmp = cpr.compare(key, t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                    return t.setValue(value);
+            } while (t != null);
+        }
+        else {
+            if (key == null)
+                throw new NullPointerException();
+            // 默认比较器
+            @SuppressWarnings("unchecked")
+                Comparable<? super K> k = (Comparable<? super K>) key;
+            do {
+                parent = t;
+                cmp = k.compareTo(t.key);
+                if (cmp < 0)
+                    t = t.left;
+                else if (cmp > 0)
+                    t = t.right;
+                else
+                    return t.setValue(value);
+            } while (t != null);
+        }
+        
+        // 3.将新节点链入红黑树中
+        Entry<K,V> e = new Entry<>(key, value, parent);
+        // 如果新插入 key 小于 parent 的 key，则 e 作为 parent 的左子节点
+        if (cmp < 0)
+            parent.left = e;
+        else
+            parent.right = e;
+            
+        // 4.回调函数，插入新节点可能会破坏红黑树性质，修复红黑树
+        fixAfterInsertion(e);
+        size++;
+        modCount++;
+        return null;
+    }
+```
+##### 插入会碰到五种情况
+- x 是根节点
+- x 的父节点是黑色
+- x 的父节点是红色，叔叔节点也是红色
+- x 的父节点是红色，叔叔节点是黑色，且 N 是 P 的右孩子
+- x 的父节点是红色，叔叔节点是黑色，且 N 是 P 的左孩子
+
+```java
+  private void fixAfterInsertion(Entry<K,V> x) {
+        x.color = RED;
+
+        // x节点的父节点不是根，且x的父节点不是红色
+        while (x != null && x != root && x.parent.color == RED) {
+        
+            // 如果x的父节点是其父节点的左子节点
+            if (parentOf(x) == leftOf(parentOf(parentOf(x)))) {
+                // 获取叔叔节点
+                Entry<K,V> y = rightOf(parentOf(parentOf(x)));
+                
+                // 叔叔节点是红色，情况三
+                if (colorOf(y) == RED) {
+                    // 将x的父节点设置为黑色
+                    setColor(parentOf(x), BLACK);
+                    // 将叔叔节点设置为黑色
+                    setColor(y, BLACK);
+                    // 将祖父节点设置为红色
+                    setColor(parentOf(parentOf(x)), RED);
+                    // 向上调整祖父节点
+                    x = parentOf(parentOf(x));
+                } else { // 叔叔节点是黑色
+                
+                    // x是其父节点的右节点
+                    if (x == rightOf(parentOf(x))) {
+                        // 将x的父节点设置为x
+                        x = parentOf(x);
+                        rotateLeft(x);
+                    }
+                    
+                    setColor(parentOf(x), BLACK);
+                    setColor(parentOf(parentOf(x)), RED);
+                    rotateRight(parentOf(parentOf(x)));
+                }
+            } else {// 如果x的父节点是其父节点的右子节点
+            
+                // 获取叔叔节点
+                Entry<K,V> y = leftOf(parentOf(parentOf(x)));
+                // 如果叔叔节点是红色
+                if (colorOf(y) == RED) {
+                    // 将x的父节点设置为黑色
+                    setColor(parentOf(x), BLACK);
+                    // 将x的叔叔节点设置为黑色
+                    setColor(y, BLACK);
+                    // 将x的祖父节点设置为红色
+                    setColor(parentOf(parentOf(x)), RED);
+                    x = parentOf(parentOf(x));
+                } else { // 叔叔节点是黑色
+                
+                    // x是其父节点的左子节点
+                    if (x == leftOf(parentOf(x))) {
+                        // 将x的父节点设置为x
+                        x = parentOf(x);
+                        rotateRight(x);
+                    }
+                    setColor(parentOf(x), BLACK);
+                    setColor(parentOf(parentOf(x)), RED);
+                    rotateLeft(parentOf(parentOf(x)));
+                }
+            }
+        }
+        // 将根节点设为黑色
+        root.color = BLACK;
+    }
+```
 
 **左旋**
 ```java
@@ -347,3 +442,5 @@ TreeMap 可以保证键的有序性，默认是正序。所以在遍历过程中
     } 
     
 ```
+
+**删除**
