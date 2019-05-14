@@ -1,3 +1,14 @@
+java并发编程指南 https://blog.csdn.net/qq_34337272/column/info/20860 
+ 
+死磕系列： http://cmsblogs.com/?p=2611 
+ 
+面试题系列： https://blog.csdn.net/linzhiqiang0316/article/details/80473906 
+ 
+简书： https://www.jianshu.com/nb/4893857 
+ 
+以上几个博客足够了，着重推荐一下死磕系列和简书的文章，比较深入
+
+
 多线程知识点
 
 Semaphore信号量
