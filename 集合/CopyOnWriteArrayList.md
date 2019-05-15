@@ -6,7 +6,11 @@
 **`CopyOnWriteArrayList`线程安全机制**
 
 ### 应用场景
-读操作远远大于写操作
+读操作远远大于写操作，并且在多线程中使用，需要经常遍历
+
+### 缺点
+- 内存占用大，因为要复制一份
+- `CopyOnWriteArrayList`只能保证数据最终一致性，不能保证实时一致性
 
 ### 基本属性
 ```java
@@ -181,3 +185,31 @@ public class CopyOnWriteArrayList<E>
 ```
 
 ### 遍历
+```java
+    public Iterator<E> iterator() {
+        return new COWIterator<E>(getArray(), 0);
+    }
+    
+    static final class COWIterator<E> implements ListIterator<E> {
+        /** array 数组的快照 */
+        private final Object[] snapshot;
+        /** 下一个元素的下标 */
+        private int cursor;
+
+        private COWIterator(Object[] elements, int initialCursor) {
+            cursor = initialCursor;
+            snapshot = elements;
+        }
+
+        public boolean hasNext() {
+            return cursor < snapshot.length;
+        }
+        
+        @SuppressWarnings("unchecked")
+        public E next() {
+            if (! hasNext())
+                throw new NoSuchElementException();
+            return (E) snapshot[cursor++];
+        }
+    }
+```
