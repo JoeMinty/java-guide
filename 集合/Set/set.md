@@ -189,3 +189,76 @@ public class HashSet<E> extends AbstractSet<E>
        }  
    }  
 ```
+
+# CopyOnWriteArraySet
+
+### 特点
+线程安全的无序集合，但和`HashSet`不同的是，`CopyOnWriteArraySet`内部是通过`CopyOnWriteArrayList`实现的，并不是`HashMap`，和`HashSet`一样，只有增删，没有改查
+
+### 适用场景
+- 大量读，遍历读
+- 线程安全
+
+### 类定义
+```java
+    public class CopyOnWriteArraySet<E> extends AbstractSet<E>
+        implements java.io.Serializable {
+        // ...    
+    }
+```
+
+### 重要参数
+```java
+    // 通过CopyOnWriteArrayList来控制线程安全
+    private final CopyOnWriteArrayList<E> al;
+```
+
+### 构造函数
+```java
+    /** 创建一个空的CopyOnWriteArrayList */
+    public CopyOnWriteArraySet() {
+        al = new CopyOnWriteArrayList<E>();
+    }
+
+    /**
+     * Creates a set containing all of the elements of the specified
+     * collection.
+     *
+     * @param c the collection of elements to initially contain
+     * @throws NullPointerException if the specified collection is null
+     */
+    public CopyOnWriteArraySet(Collection<? extends E> c) {
+        if (c.getClass() == CopyOnWriteArraySet.class) {
+            @SuppressWarnings("unchecked") CopyOnWriteArraySet<E> cc =
+                (CopyOnWriteArraySet<E>)c;
+            al = new CopyOnWriteArrayList<E>(cc.al);
+        }
+        else {
+            al = new CopyOnWriteArrayList<E>();
+            al.addAllAbsent(c);
+        }
+    }
+```
+
+### 重要方法
+```java
+    /** 删除 */
+    public boolean remove(Object o) {
+        return al.remove(o);
+    }
+    
+    /** 新增 */
+    public boolean add(E e) {
+        return al.addIfAbsent(e);
+    }
+    
+    /** Iterator遍历 */
+    public Iterator<E> iterator() {
+        return al.iterator();
+    }
+    
+    /** forEach遍历 */
+    public void forEach(Consumer<? super E> action) {
+        al.forEach(action);
+    }
+```
