@@ -60,4 +60,4 @@ void afterNodeAccess(Node<K,V> e) { // move node to last
         }
     }
 ```
-ps:afterNodeAccess()方法会修改modCount，处于accessOrder=true的时候迭代LinkedHashMap，如果同时查询访问数据，会导致fail-fast，因为迭代的顺序已经改变。
+注意：`afterNodeAccess()`方法会修改modCount，处于accessOrder=true的时候迭代LinkedHashMap，如果同时查询访问数据，会导致fail-fast，因为迭代的顺序已经改变。
