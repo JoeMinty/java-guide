@@ -674,7 +674,7 @@ public class ArrayList<E> extends AbstractList<E>
     }
 
     /**
-     * An optimized version of AbstractList.Itr
+     * An optimized version of AbstractList.Itr 优化的迭代器
      */
     private class Itr implements Iterator<E> {
         int cursor;       // index of next element to return
