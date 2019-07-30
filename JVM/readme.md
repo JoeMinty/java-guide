@@ -11,3 +11,7 @@
 
 ## 参考文章
 https://juejin.im/post/5c983bd46fb9a0710a1bd3e1
+
+
+虚拟机规范
+https://www.jqhtml.com/down/620.html
