@@ -8,6 +8,7 @@ java并发编程指南 https://blog.csdn.net/qq_34337272/column/info/20860
  
 以上几个博客足够了，着重推荐一下死磕系列和简书的文章，比较深入
 
+synchronized： https://blog.csdn.net/javazejian/article/details/72828483
 
 多线程知识点
 
