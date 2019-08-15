@@ -13,6 +13,43 @@
 共享式获取与独占式获取最主要的区别在于同一时刻能否有多个线程同时获取到同步状态。
 
 ### 超时获取同步状态
+超时获取同步状态过程可以被视作响应中断获取同步状态过程的“增强版”，doAcquireNanos(int arg,long nanosTimeout)方法在支持响应中断的基础上，增加了超时获取的特性。针对超时获取，主要需要计算出需要睡眠的时间间隔nanosTimeout，为了防止过早通知，nanosTimeout计算公式为：nanosTimeout-=now-lastTime，其中now为当前唤醒时间，lastTime为上次唤醒时间，如果nanosTimeout大于0则表示超时时间未到，需要继续睡眠nanosTimeout纳秒，反之，表示已经超时
+
+```java
+private boolean doAcquireNanos(int arg, long nanosTimeout)
+            throws InterruptedException {
+        if (nanosTimeout <= 0L)
+            return false;
+        final long deadline = System.nanoTime() + nanosTimeout;
+        final Node node = addWaiter(Node.EXCLUSIVE);
+        boolean failed = true;
+        try {
+            for (;;) {
+                final Node p = node.predecessor();
+                if (p == head && tryAcquire(arg)) {
+                    setHead(node);
+                    p.next = null; // help GC
+                    failed = false;
+                    return true;
+                }
+                nanosTimeout = deadline - System.nanoTime();
+                if (nanosTimeout <= 0L)
+                    return false;
+                if (shouldParkAfterFailedAcquire(p, node) &&
+                    nanosTimeout > spinForTimeoutThreshold)
+                    LockSupport.parkNanos(this, nanosTimeout);
+                if (Thread.interrupted())
+                    throw new InterruptedException();
+            }
+        } finally {
+            if (failed)
+                cancelAcquire(node);
+        }
+    }
+```
+
+
+### 自定义aqs
 
 ```java
 import java.util.concurrent.TimeUnit;
@@ -89,3 +126,6 @@ public class TwinsLock implements Lock {
 
 
 ```
+
+
+
