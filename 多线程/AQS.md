@@ -127,5 +127,6 @@ public class TwinsLock implements Lock {
 
 ```
 
-
+### LockSupport
+LockSupport定义了一组的公共静态方法，这些方法提供了最基本的线程阻塞和唤醒功能，而LockSupport也成为构建同步组件的基础工具
 
