@@ -127,6 +127,108 @@ public class TwinsLock implements Lock {
 
 ```
 
+### 读写锁
+
+分析`ReentrantReadWriteLock`的实现
+
+- 读写状态的设计
+
+读写锁状态变量切分成两个部分，高16位表示读，低16位表示写
+
+读状态 S >>> 16
+
+写状态 S & 0x0000FFFF
+
+读状态+1  S + (1 << 16) => S + 0x00010000
+
+写状态+1  S + 1
+
+- 写锁的获取与释放
+
+如果当前线程已经获取了写锁，则增加写状态。如果当前线程在获取写锁时，读锁已经被获取（读状态不为0）或者该线程不是已经获取写锁的线程，则当前线程进入等待状态
+
+```java
+protected final boolean tryAcquire(int acquires) {
+            /*
+             * Walkthrough:
+             * 1. If read count nonzero or write count nonzero
+             *    and owner is a different thread, fail.
+             * 2. If count would saturate, fail. (This can only
+             *    happen if count is already nonzero.)
+             * 3. Otherwise, this thread is eligible for lock if
+             *    it is either a reentrant acquire or
+             *    queue policy allows it. If so, update state
+             *    and set owner.
+             */
+            Thread current = Thread.currentThread();
+            int c = getState();
+            int w = exclusiveCount(c);
+            if (c != 0) {
+                // (Note: if c != 0 and w == 0 then shared count != 0)
+                if (w == 0 || current != getExclusiveOwnerThread())
+                    return false;
+                if (w + exclusiveCount(acquires) > MAX_COUNT)
+                    throw new Error("Maximum lock count exceeded");
+                // Reentrant acquire
+                setState(c + acquires);
+                return true;
+            }
+            if (writerShouldBlock() ||
+                !compareAndSetState(c, c + acquires))
+                return false;
+            setExclusiveOwnerThread(current);
+            return true;
+        }
+
+```
+ 
+
+- 读锁的获取与释放
+
+读锁是一个支持可重入的共享锁，能够被多个线程同时获取，在没有其他写线程访问（或者写状态为0）时，读锁总会被成功获取，如果当前线程已经获取了读锁，则增加读状态。如果当前线程在获取读锁时，写锁已经被其他线程获取，则进入等待状态。
+
+- 锁降级
+
+```java
+class CachedData {
+    Object data;
+    volatile boolean cacheValid;
+    // 读写锁实例
+    final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+
+    void processCachedData() {
+        // 获取读锁
+        rwl.readLock().lock();
+        if (!cacheValid) { // 如果缓存过期了，或者为 null
+            // 释放掉读锁，然后获取写锁 (后面会看到，没释放掉读锁就获取写锁，会发生死锁情况)
+            rwl.readLock().unlock();
+            rwl.writeLock().lock();
+
+            try {
+                if (!cacheValid) { // 重新判断，因为在等待写锁的过程中，可能前面有其他写线程执行过了
+                    data = ...
+                    cacheValid = true;
+                }
+                // 获取读锁 (持有写锁的情况下，是允许获取读锁的，称为 “锁降级”，反之不行。)
+                rwl.readLock().lock();
+            } finally {
+                // 释放写锁，此时还剩一个读锁
+                rwl.writeLock().unlock(); // Unlock write, still hold read
+            }
+        }
+
+        try {
+            use(data);
+        } finally {
+            // 释放读锁
+            rwl.readLock().unlock();
+        }
+    }
+}
+
+```
+
+
 ### LockSupport
 LockSupport定义了一组的公共静态方法，这些方法提供了最基本的线程阻塞和唤醒功能，而LockSupport也成为构建同步组件的基础工具
 
