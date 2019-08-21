@@ -232,3 +232,30 @@ class CachedData {
 ### LockSupport
 LockSupport定义了一组的公共静态方法，这些方法提供了最基本的线程阻塞和唤醒功能，而LockSupport也成为构建同步组件的基础工具
 
+### Condition
+`Codition`对象依赖`Lock`对象,。当调用`await()`方法后，当前线程会释放锁并在此等待，而其他线程调用`Condition`对象的`signal()`方法，通知当前线程后，当前线程才从`await()`方法返回，并且在返回前已经获取了锁。
+
+```java
+  
+  Lock lock = new ReentrantLock();
+  Condition condition = lock.newCondition();
+  
+  public void conditionWait() throw InterruptedException {
+    lock.lock();
+    try {
+      condition.await();
+    } finally {
+      lock.unlock();
+    }
+  }
+  
+  public void conditionSignal() throw InterruptedException {
+    lock.lock();
+    try {
+      condition.signal();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+```
