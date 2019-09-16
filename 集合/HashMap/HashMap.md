@@ -25,6 +25,8 @@
   UNTREEIFY_THRESHOLD = 6
 
 - **最小树形化容量阈值**
+
+  MIN_TREEIFY_CAPACITY = 64
   
   当哈希表中的容量 > 该值时，才允许树形化链表
 
@@ -212,8 +214,8 @@
               Node<K,V> e;
               // 如果旧的bucket不为null，则进行移动操作
               if ((e = oldTab[j]) != null) {
-                  oldTab[j] = null; // 将就的数组对应bucket位置置为null
-                  if (e.next == null)  // 如果对应bucket只有一个对象，则计算hash，并移动到新buckets中
+                  oldTab[j] = null; // 将旧的数组对应bucket位置置为null
+                  if (e.next == null)  // 如果对应bucket只有一个对象，则计算hash，并移动到新bucket中
                       newTab[e.hash & (newCap - 1)] = e;
                   else if (e instanceof TreeNode) // 如果是红黑树（即超过8个Node对象）
                       ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
@@ -263,11 +265,11 @@
   /** 将桶内所有的 链表节点 替换成 红黑树节点 */
   final void treeifyBin(Node<K,V>[] tab, int hash) {
       int n, index; Node<K,V> e;
-      // 如果当前哈希表为空，或者哈希表中元素的个数小于进行树形化的阈值(默认为 64)，执行新建或者扩容
+      // 如果当前哈希表为空，或者哈希表中数组的长度小于进行树形化的阈值(默认为 64)，执行新建或者扩容，没必要转换数据结构
       if (tab == null || (n = tab.length) < MIN_TREEIFY_CAPACITY)
           resize();
       else if ((e = tab[index = (n - 1) & hash]) != null) {
-          // 如果哈希表中的元素个数超过了树形化阈值，进行树形化
+          // 如果哈希表中的数组的长度超过了树形化阈值，进行树形化
           // e 是哈希表中指定位置桶里的链表节点，从第一个开始
           TreeNode<K,V> hd = null, tl = null; // 红黑树的头、尾节点
           do {
@@ -293,3 +295,5 @@
 https://blog.csdn.net/wushiwude/article/details/75331926
 
 https://blog.csdn.net/carson_ho/article/details/79373134
+
+https://blog.csdn.net/weixin_42340670/article/details/80503863
