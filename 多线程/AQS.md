@@ -1,4 +1,4 @@
-# AQS（AbstractQueueSynchronizer）同步器
+# AQS（AbstractQueuedSynchronizer）同步器
 是用来构建锁或者其他同步组件的基础框架。
 
 ### 同步队列
