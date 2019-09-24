@@ -1,6 +1,48 @@
 # AQS（AbstractQueuedSynchronizer）同步器
 是用来构建锁或者其他同步组件的基础框架。
 
+同步器的主要使用方式是继承，子类通过继承同步器并实现它的抽象方法来管理同步状态，在抽象方法的实现过程中需要对同步状态进行更改
+
+```java
+getState() 获取当前同步状态
+
+setState() 设置当前同步状态
+
+compareAndSetState() 使用cas设置当前状态，该方法能够保证状态设置的原子性
+```
+
+同步器既可以支持独占式地获取同步状态，也可以支持共享式地获取同步状态
+
+```
+// 同步器可重写的方法
+
+tryAcquire()
+
+tryRelease()
+
+tryAcquireShared()
+
+tryReleaseShared()
+
+isHeldExcusively() 当前同步器是否在独占模式下呗线程占用，一般该方法表示是否被当前线程所独占
+``` 
+
+```java
+
+// 模板方法
+acquire()
+
+acquireInterruptibly()
+
+tryAcquireNanos()
+
+acquireShared()
+
+acquireSharedInterruptibly()
+
+
+```
+
 ### 同步队列
 同步器依赖内部的同步队列（一个FIFO双向队列）来完成同步状态的管理，当前线程获取同步状态失败时，同步器会将当前线程以及等待状态等信息构造成为一个节（Node）并将其加入同步队列，同时会阻塞当前线程，当同步状态释放时，会把首节点中的线程唤醒，使其再次尝试获取同步状态。同步队列中的节点（Node）用来保存获取同步状态失败的线程引用、等待状态以及前驱和后继节点。
 
