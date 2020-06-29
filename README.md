@@ -1,5 +1,8 @@
 # java-guide
 
+## 规则
+https://wiki.sei.cmu.edu/confluence/display/java/SEI+CERT+Oracle+Coding+Standard+for+Java
+
 知识列表
 https://juejin.im/post/5aa4a2e35188255589496eb8
 
