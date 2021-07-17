@@ -19,3 +19,16 @@ MetaspaceObj
                                  |
                                  |———— ObjArrayKlass （描述java中引用类型数组的数据结构）
 ```
+
+```
+oopDesc
+   |———— MarkOopDesc（存放锁信息，分代年龄...）
+   |
+   |———— InstanceOopDesc（非数组对象）
+   |
+   |———— ArrayOopDesc（数组对象）
+              |
+              |———— TypeArrayOopDesc（描述java中基本数据类型数组）
+              |
+              |———— ObjArrayOopDesc（描述java中引用类型数组）
+```
